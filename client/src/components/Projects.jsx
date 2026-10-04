@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 function Projects() {
   const [showForm, setShowForm] = useState(false)
+  const [editProjectId, setEditProjectId] = useState(null)
 
   const [projects, setProjects] = useState([
     {
@@ -24,47 +25,194 @@ function Projects() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [status, setStatus] = useState("Active")
+  const [dueDate, setDueDate] = useState("")
 
-  async function handleCreateProject() {
-  if (name.trim() === "" || description.trim() === "") {
-    alert("Please fill in all fields")
-    return
-  }
+  // Fetch projects from MongoDB
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/projects"
+        )
 
-  const newProject = {
-    name: name,
-    description: description,
-    status: status,
-  }
+        const data = await response.json()
 
-  try {
-    const response = await fetch("http://localhost:5000/api/projects", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(newProject),
-    })
+        if (!response.ok) {
+          console.error("Failed to fetch projects")
+          return
+        }
 
-    const savedProject = await response.json()
+        setProjects(data)
+      } catch (error) {
+        console.error("Error fetching projects:", error)
+      }
+    }
 
-    if (!response.ok) {
-      alert(savedProject.message || "Failed to create project")
+    fetchProjects()
+  }, [])
+
+  // Delete project
+  async function handleDeleteProject(id) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this project?"
+    )
+
+    if (!confirmed) {
       return
     }
 
-    setProjects([...projects, savedProject])
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/projects/${id}`,
+        {
+          method: "DELETE",
+        }
+      )
 
+      const data = await response.json()
+
+      if (!response.ok) {
+        alert(data.message || "Failed to delete project")
+        return
+      }
+
+      setProjects(
+        projects.filter((project) => project._id !== id)
+      )
+    } catch (error) {
+      console.error("Error deleting project:", error)
+      alert("Could not connect to server")
+    }
+  }
+
+  // Create project
+  async function handleCreateProject() {
+    if (name.trim() === "" || description.trim() === "") {
+      alert("Please fill in all fields")
+      return
+    }
+
+    const newProject = {
+      name: name,
+      description: description,
+      status: status,
+      dueDate: dueDate || null,
+    }
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/projects",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newProject),
+        }
+      )
+
+      const savedProject = await response.json()
+
+      if (!response.ok) {
+        alert(
+          savedProject.message || "Failed to create project"
+        )
+        return
+      }
+
+      setProjects([...projects, savedProject])
+
+      setName("")
+      setDescription("")
+      setStatus("Active")
+      setDueDate("")
+      setShowForm(false)
+    } catch (error) {
+      console.error(error)
+      alert("Could not connect to server")
+    }
+  }
+
+  // Update project
+  async function handleUpdateProject() {
+    if (name.trim() === "" || description.trim() === "") {
+      alert("Please fill in all fields")
+      return
+    }
+
+    const updatedProject = {
+      name: name,
+      description: description,
+      status: status,
+      dueDate: dueDate || null,
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/projects/${editProjectId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedProject),
+        }
+      )
+
+      const savedProject = await response.json()
+
+      if (!response.ok) {
+        alert(
+          savedProject.message || "Failed to update project"
+        )
+        return
+      }
+
+      setProjects(
+        projects.map((project) =>
+          project._id === editProjectId
+            ? savedProject
+            : project
+        )
+      )
+
+      setName("")
+      setDescription("")
+      setStatus("Active")
+      setDueDate("")
+      setEditProjectId(null)
+      setShowForm(false)
+    } catch (error) {
+      console.error("Error updating project:", error)
+      alert("Could not connect to server")
+    }
+  }
+
+  // Open edit form
+  function handleEditProject(project) {
+    setEditProjectId(project._id)
+    setName(project.name)
+    setDescription(project.description)
+    setStatus(project.status)
+
+    setDueDate(
+      project.dueDate
+        ? project.dueDate.substring(0, 10)
+        : ""
+    )
+
+    setShowForm(true)
+  }
+
+  // Cancel form
+  function handleCancelForm() {
     setName("")
     setDescription("")
     setStatus("Active")
+    setDueDate("")
+    setEditProjectId(null)
     setShowForm(false)
-
-  } catch (error) {
-    console.error(error)
-    alert("Could not connect to server")
   }
-}
 
   return (
     <div className="projects-page">
@@ -77,7 +225,14 @@ function Projects() {
 
         <button
           className="new-project-btn"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setEditProjectId(null)
+            setName("")
+            setDescription("")
+            setStatus("Active")
+            setDueDate("")
+            setShowForm(true)
+          }}
         >
           + New Project
         </button>
@@ -85,7 +240,12 @@ function Projects() {
 
       {showForm && (
         <div className="project-form-card">
-          <h3>Create New Project</h3>
+
+          <h3>
+            {editProjectId
+              ? "Edit Project"
+              : "Create New Project"}
+          </h3>
 
           <input
             type="text"
@@ -97,7 +257,9 @@ function Projects() {
           <textarea
             placeholder="Project description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) =>
+              setDescription(e.target.value)
+            }
           />
 
           <select
@@ -109,39 +271,92 @@ function Projects() {
             <option>Pending</option>
           </select>
 
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+
           <div className="form-actions">
+
             <button
               className="create-btn"
-              onClick={handleCreateProject}
+              onClick={
+                editProjectId
+                  ? handleUpdateProject
+                  : handleCreateProject
+              }
             >
-              Create Project
+              {editProjectId
+                ? "Update Project"
+                : "Create Project"}
             </button>
 
             <button
               className="cancel-btn"
-              onClick={() => setShowForm(false)}
+              onClick={handleCancelForm}
             >
               Cancel
             </button>
+
           </div>
         </div>
       )}
 
       <div className="projects-grid">
 
-        {projects.map((project, index) => (
-          <div className="project-card" key={index}>
+        {projects.map((project) => (
+          <div
+            className="project-card"
+            key={project._id}
+          >
 
             <div>
               <h3>{project.name}</h3>
               <p>{project.description}</p>
+
+              {project.dueDate && (
+                <p>
+                  Due:{" "}
+                  {new Date(project.dueDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }
+                  )}
+                </p>
+              )}
             </div>
 
-            <span
-              className={`project-status ${project.status.toLowerCase()}`}
-            >
-              {project.status}
-            </span>
+            <div className="project-card-actions">
+
+              <span
+                className={`project-status ${project.status.toLowerCase()}`}
+              >
+                {project.status}
+              </span>
+
+              <button
+                className="edit-btn"
+                onClick={() =>
+                  handleEditProject(project)
+                }
+              >
+                Edit
+              </button>
+
+              <button
+                className="delete-btn"
+                onClick={() =>
+                  handleDeleteProject(project._id)
+                }
+              >
+                Delete
+              </button>
+
+            </div>
 
           </div>
         ))}

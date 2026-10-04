@@ -1,46 +1,122 @@
+import { useEffect, useState } from "react"
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts"
 
-const data = [
-  { month: "Apr", revenue: 42000 },
-  { month: "May", revenue: 52000 },
-  { month: "Jun", revenue: 48000 },
-  { month: "Jul", revenue: 65000 },
-  { month: "Aug", revenue: 72000 },
-  { month: "Sep", revenue: 84500 },
-]
-
 function RevenueChart() {
+  const [data, setData] = useState([])
+
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/projects"
+        )
+
+        const projects = await response.json()
+
+        if (!response.ok) {
+          console.error("Failed to fetch projects")
+          return
+        }
+
+        const today = new Date()
+        const last7Days = []
+
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(today)
+          date.setHours(0, 0, 0, 0)
+          date.setDate(today.getDate() - i)
+
+          last7Days.push(date)
+        }
+
+        const chartData = last7Days.map((date) => {
+          const year = date.getFullYear()
+          const month = date.getMonth()
+          const day = date.getDate()
+
+          const created = projects.filter((project) => {
+            if (!project.createdAt) return false
+
+            const projectDate = new Date(project.createdAt)
+
+            return (
+              projectDate.getFullYear() === year &&
+              projectDate.getMonth() === month &&
+              projectDate.getDate() === day
+            )
+          }).length
+
+          const completed = projects.filter((project) => {
+            if (!project.completedAt) return false
+
+            const completedDate = new Date(project.completedAt)
+
+            return (
+              completedDate.getFullYear() === year &&
+              completedDate.getMonth() === month &&
+              completedDate.getDate() === day
+            )
+          }).length
+
+          return {
+            day: date.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+            created,
+            completed,
+          }
+        })
+
+        setData(chartData)
+      } catch (error) {
+        console.error("Error fetching projects:", error)
+      }
+    }
+
+    fetchProjects()
+  }, [])
+
   return (
     <div className="revenue-chart">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
+        <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
 
-          <XAxis dataKey="month" />
+          <XAxis dataKey="day" />
 
           <YAxis
-           tickFormatter={(value) => `₹${value / 1000}K`}
-         />
-
-          <Tooltip
-            formatter={(value) => `₹${value.toLocaleString()}`}
-         />
-
-          <Line
-            type="monotone"
-            dataKey="revenue"
-            stroke="#6366f1"
-            strokeWidth={3}
+            domain={[0, "auto"]}
+            allowDecimals={false}
           />
-        </LineChart>
+
+          <Tooltip />
+
+          <Legend />
+
+          <Bar
+            dataKey="created"
+            name="Created"
+            fill="#3b82f6"
+            radius={[4, 4, 0, 0]}
+          />
+
+          <Bar
+            dataKey="completed"
+            name="Completed"
+            fill="#8b5cf6"
+            radius={[4, 4, 0, 0]}
+          />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   )
