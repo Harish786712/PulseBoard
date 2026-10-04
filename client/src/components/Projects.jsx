@@ -32,7 +32,7 @@ function Projects() {
     async function fetchProjects() {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/projects"
+          "https://pulseboard-67v2.onrender.com/api/projects"
         )
 
         const data = await response.json()
@@ -63,7 +63,7 @@ function Projects() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/projects/${id}`,
+        `https://pulseboard-67v2.onrender.com/api/projects/${id}`,
         {
           method: "DELETE",
         }
@@ -101,7 +101,7 @@ function Projects() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/projects",
+        "https://pulseboard-67v2.onrender.com/api/projects",
         {
           method: "POST",
           headers: {
@@ -149,7 +149,7 @@ function Projects() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/projects/${editProjectId}`,
+        `https://pulseboard-67v2.onrender.com/api/projects/${editProjectId}`,
         {
           method: "PUT",
           headers: {

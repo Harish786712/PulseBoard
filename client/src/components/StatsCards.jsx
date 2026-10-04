@@ -4,7 +4,7 @@ function StatsCards() {
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/projects")
+    fetch("https://pulseboard-67v2.onrender.com/api/projects")
       .then((response) => response.json())
       .then((data) => {
         setProjects(data);

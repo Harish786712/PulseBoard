@@ -17,7 +17,7 @@ function RevenueChart() {
     async function fetchProjects() {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/projects"
+          "https://pulseboard-67v2.onrender.com/api/projects"
         )
 
         const projects = await response.json()
